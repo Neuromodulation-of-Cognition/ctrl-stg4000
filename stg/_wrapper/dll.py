@@ -7,8 +7,8 @@ from abc import ABC, abstractmethod
 OptionalInt = Union[int, None]
 
 # ----------------------------------------------------------------------------
-# Mocking everything in case we run this for testing or on Linux
-if "win" in platform:  # pragma no cover
+# Mocking everything in case we run this for testing or on Linux / MacOS
+if "win" in platform and not platform == "darwin":  # pragma no cover
     # pylint: disable=import-error
     import clr
     import System
