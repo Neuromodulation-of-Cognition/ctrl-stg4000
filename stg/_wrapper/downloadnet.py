@@ -57,7 +57,7 @@ class STG4000(STGX):
             triggerIndex = [triggerIndex]
 
         if triggerIndex == []:
-            triggerIndex = [c for c in range(self.channel_count)]
+            triggerIndex = [int(c) for c in range(self.channel_count)]
 
         for idx, v in enumerate(triggerIndex):
             if not isinstance(v, int):
