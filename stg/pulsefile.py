@@ -4,6 +4,7 @@ from typing import Tuple, List, Union
 
 FileName = Union[Path, str]
 
+
 class PulseFileAlternative:
     """Programmatically generate repetitive a biphasic or monophasic pulses
 
@@ -11,7 +12,7 @@ class PulseFileAlternative:
     ----
     intensity_in_mA: float = 1
         the amplitude of the first rectangular pulse
-    mode: str {"biphasic", "monophasic"} 
+    mode: str {"biphasic", "monophasic"}
         whether the pulse will be monophasic of biphasic, i.e. followed by a rectangular pulse with inverted amplitude
     pulsewidth_in_ms: float = 0.1
         the width of each rectangular pulse
@@ -22,57 +23,55 @@ class PulseFileAlternative:
 
 
     After initialization, run  :meth:`~.compile` to generate amplitudes and durations. These can be downloadwed with STG4000s :meth:`~.stg._wrapper.downloadnet.STG4000.download`
-    
+
     """
 
     def __init__(
         self,
-        pulsewidth, # ms not µs
-        stimtime,   # s
+        pulsewidth,  # ms not µs
+        stimtime,  # s
         frequency,  # Hz
         intensity,  # mA
         phase_ratio: tuple[float, float],
-        first_intensity_negative : bool = True,
-        max_intensity: float = 3, # mA
-        polarity_change_delay: float = 0, # ms
+        first_intensity_negative: bool = True,
+        max_intensity: float = 3,  # mA
+        polarity_change_delay: float = 0,  # ms
         waveform: str = "rectangular_assym_biphasic",
         # TODO: take max intensity from stg4000?
         # TODO: start intensity?
-        #intensity_in_mA: float = 1,
-        #mode: str = "biphasic",
-        #pulsewidth_in_ms: float = 0.1,
-        #burstcount: int = 1,
-        #isi_in_ms: float = 49.8,
-
+        # intensity_in_mA: float = 1,
+        # mode: str = "biphasic",
+        # pulsewidth_in_ms: float = 0.1,
+        # burstcount: int = 1,
+        # isi_in_ms: float = 49.8,
     ):
         # TODO: input checking of values
         if intensity > max_intensity:
             raise ValueError(f"Intensity cannot be greater than {max_intensity} mA")
-        
+
         if intensity < 0:
             raise ValueError("Intensity cannot be negative")
-        
+
         if frequency <= 0:
             raise ValueError("Frequency must be larger than 0")
-        
+
         if stimtime <= 0:
             raise ValueError("Stimtime must be larger than 0")
-  
-
-        
 
         # TODO: check accuracy of STG stimulator and round accordingly
         # generate waveform: rectanfular assymmetric biphasic: starts with negative waveform and then positive phase of double the duration but half the intensity
         # TODO: make ratio of positive and negative phase intensity adjustable
         if waveform == "rectangular_assym_biphasic":
-            stimtime            = pulsewidth - polarity_change_delay
-            first_phase_dur     = stimtime * (phase_ratio[0] / sum(phase_ratio))
-            second_phase_dur    = stimtime * (phase_ratio[1] / sum(phase_ratio))
+            stimtime = pulsewidth - polarity_change_delay
+            first_phase_dur = stimtime * (phase_ratio[0] / sum(phase_ratio))
+            second_phase_dur = stimtime * (phase_ratio[1] / sum(phase_ratio))
 
             charge_balance_ratio = phase_ratio[0] / phase_ratio[1]
 
-            first_phase_intensity   = -intensity if first_intensity_negative else intensity
-            second_phase_intensity  = -first_phase_intensity * charge_balance_ratio
+            first_phase_intensity = (
+                -intensity if first_intensity_negative else intensity
+            )
+            second_phase_intensity = -first_phase_intensity * charge_balance_ratio
 
             self.intensities = [first_phase_intensity, second_phase_intensity]
             self.pulsewidths = [first_phase_dur, second_phase_dur]
@@ -91,10 +90,12 @@ class PulseFileAlternative:
         self.polarity_change_delay = polarity_change_delay
         self.waveform = waveform
         self.n_pulses = int(stimtime * frequency)
-        self.inter_stimulus_interval = (1 / frequency) * 1000 - pulsewidth   # in ms  # TODO potential cringe
+        self.inter_stimulus_interval = (
+            1 / frequency
+        ) * 1000 - pulsewidth  # in ms  # TODO potential cringe
         if self.inter_stimulus_interval < 0:
             raise ValueError("Inter stimulus interval cannot be negative")
-      
+
         """
         # OLDDDDDDD
         if mode == "biphasic":
@@ -132,12 +133,9 @@ class PulseFileAlternative:
         durations_in_ms: List[float]
             a list of durations
 
-        """
-        amps = [a for a in chain(self.intensities, [0])]
-        durs = [d for d in chain(self.pulsewidths, [self.isi])]
-        amps = chain(*repeat(amps, self.burstcount))  # repeat
-        durs = chain(*repeat(durs, self.burstcount))  # repeat
-        return list(amps), list(durs)
+        """        amps = (self.intensities + [0]) * self.burstcount
+        durs = (self.pulsewidths + [self.isi]) * self.burstcount
+        return amps, durs
 
     @property
     def duration_in_ms(self):
@@ -237,7 +235,7 @@ def decompress(
     rate_in_hz: int = 50_000,
 ) -> List[float]:
     """decompress amplitudes and durations into a continuously sampled signal
-    
+
     args
     ------
     amplitudes_in_mA: List[float,] = [0]
@@ -246,7 +244,7 @@ def decompress(
         a list of the respective durationas
     rate_in_hz: int = 50_000
         the sampling rate of the decompressed signal
-    
+
     returns
     -------
     signal: List[float]
@@ -303,7 +301,6 @@ def entrain(
     return amps, durs
 
 
-
 class PulseFile:
     """Programmatically generate repetitive a biphasic or monophasic pulses
 
@@ -311,7 +308,7 @@ class PulseFile:
     ----
     intensity_in_mA: float = 1
         the amplitude of the first rectangular pulse
-    mode: str {"biphasic", "monophasic"} 
+    mode: str {"biphasic", "monophasic"}
         whether the pulse will be monophasic of biphasic, i.e. followed by a rectangular pulse with inverted amplitude
     pulsewidth_in_ms: float = 0.1
         the width of each rectangular pulse
@@ -322,7 +319,7 @@ class PulseFile:
 
 
     After initialization, run  :meth:`~.compile` to generate amplitudes and durations. These can be downloadwed with STG4000s :meth:`~.stg._wrapper.downloadnet.STG4000.download`
-    
+
     """
 
     def __init__(
@@ -473,7 +470,7 @@ def decompress(
     rate_in_hz: int = 50_000,
 ) -> List[float]:
     """decompress amplitudes and durations into a continuously sampled signal
-    
+
     args
     ------
     amplitudes_in_mA: List[float,] = [0]
@@ -482,7 +479,7 @@ def decompress(
         a list of the respective durationas
     rate_in_hz: int = 50_000
         the sampling rate of the decompressed signal
-    
+
     returns
     -------
     signal: List[float]
