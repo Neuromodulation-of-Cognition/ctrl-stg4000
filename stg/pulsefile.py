@@ -27,11 +27,13 @@ class PulseFileAlternative:
 
     def __init__(
         self,
-        max_intensity, # mA
         pulsewidth, # ms not µs
         stimtime,   # s
         frequency,  # Hz
         intensity,  # mA
+        phase_ratio: tuple[float, float],
+        first_intensity_negative : bool = True,
+        max_intensity: float = 3, # mA
         polarity_change_delay: float = 0, # ms
         waveform: str = "rectangular_assym_biphasic",
         # TODO: take max intensity from stg4000?
@@ -44,28 +46,56 @@ class PulseFileAlternative:
 
     ):
         # TODO: input checking of values
+        if intensity > max_intensity:
+            raise ValueError(f"Intensity cannot be greater than {max_intensity} mA")
+        
+        if intensity < 0:
+            raise ValueError("Intensity cannot be negative")
+        
+        if frequency <= 0:
+            raise ValueError("Frequency must be larger than 0")
+        
+        if stimtime <= 0:
+            raise ValueError("Stimtime must be larger than 0")
+  
 
-        self.n_pulses = int(stimtime * frequency)
+        
 
         # TODO: check accuracy of STG stimulator and round accordingly
         # generate waveform: rectanfular assymmetric biphasic: starts with negative waveform and then positive phase of double the duration but half the intensity
         # TODO: make ratio of positive and negative phase intensity adjustable
         if waveform == "rectangular_assym_biphasic":
-            neg_phase_dur = (pulsewidth - polarity_change_delay) / 3
-            pos_phase_dur = neg_phase_dur * 2
-            neg_phase_intensity = -intensity
-            pos_phase_intensity = intensity / 2
+            stimtime            = pulsewidth - polarity_change_delay
+            first_phase_dur     = stimtime * (phase_ratio[0] / sum(phase_ratio))
+            second_phase_dur    = stimtime * (phase_ratio[1] / sum(phase_ratio))
 
-        # TODO: add mode
-        self.inter_stimulus_interval = (1 / frequency) - pulsewidth 
-        self.intensity = [neg_phase_intensity, pos_phase_intensity]
-        self.pulsewidth = [neg_phase_dur, pos_phase_dur]
+            charge_balance_ratio = phase_ratio[0] / phase_ratio[1]
 
+            first_phase_intensity   = -intensity if first_intensity_negative else intensity
+            second_phase_intensity  = -first_phase_intensity * charge_balance_ratio
 
+            self.intensities = [first_phase_intensity, second_phase_intensity]
+            self.pulsewidths = [first_phase_dur, second_phase_dur]
 
+        if waveform == "monophasic":
+            self.intensities = [intensity]
+            self.pulsewidths = [pulsewidth]
 
-    
-
+        self.pulsewidth = pulsewidth
+        self.stimtime = stimtime
+        self.frequency = frequency
+        self.intensity = intensity
+        self.phase_ratio = phase_ratio
+        self.first_intensity_negative = first_intensity_negative
+        self.max_intensity = max_intensity
+        self.polarity_change_delay = polarity_change_delay
+        self.waveform = waveform
+        self.n_pulses = int(stimtime * frequency)
+        self.inter_stimulus_interval = (1 / frequency) * 1000 - pulsewidth   # in ms  # TODO potential cringe
+        if self.inter_stimulus_interval < 0:
+            raise ValueError("Inter stimulus interval cannot be negative")
+      
+        """
         # OLDDDDDDD
         if mode == "biphasic":
             intensity = [intensity_in_mA, -intensity_in_mA]
@@ -90,6 +120,7 @@ class PulseFileAlternative:
         self.mode: str = mode
         self.burstcount: int = burstcount
         self.isi: float = isi_in_ms
+        """
 
     def compile(self):
         """compile the pulsefile to compressed amps and durs
@@ -102,8 +133,8 @@ class PulseFileAlternative:
             a list of durations
 
         """
-        amps = [a for a in chain(self.intensity, [0])]
-        durs = [d for d in chain(self.pulsewidth, [self.isi])]
+        amps = [a for a in chain(self.intensities, [0])]
+        durs = [d for d in chain(self.pulsewidths, [self.isi])]
         amps = chain(*repeat(amps, self.burstcount))  # repeat
         durs = chain(*repeat(durs, self.burstcount))  # repeat
         return list(amps), list(durs)
@@ -111,7 +142,7 @@ class PulseFileAlternative:
     @property
     def duration_in_ms(self):
         "the duration of the complete stimulation including all bursts"
-        return self.burstcount * (sum(self.pulsewidth) + self.isi)
+        return self.burstcount * (sum(self.pulsewidths) + self.isi)
 
     def __call__(self):
         return self.compile()
