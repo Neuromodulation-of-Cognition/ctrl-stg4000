@@ -47,14 +47,22 @@ class STG4000(STGX):
     """
 
     def _sanitize_triggerIndex(self, triggerIndex: list[int] = []):
-
-        if not isinstance(triggerIndex, (list, int)):
+        """
+        Sanitizes a trigger index:
+        - raises error if not list, tuple or int
+        - converts single int to list of int
+        - converts a tuple to a list
+        """
+        if not isinstance(triggerIndex, (list, tuple, int)):
             raise ValueError(
                 f"triggerIndex should be either (list or int), was {type(triggerIndex)}."
             )
 
         if isinstance(triggerIndex, int):
             triggerIndex = [triggerIndex]
+
+        if isinstance(triggerIndex, tuple):
+            triggerIndex = list(triggerIndex)
 
         if triggerIndex == []:
             triggerIndex = [int(c) for c in range(self.channel_count)]
@@ -187,8 +195,8 @@ class STG4000(STGX):
         if len(amplitudes_in_mA) != len(durations_in_ms):
             raise ValueError("Every amplitude needs a duration and vice versa!")
 
-        amplitudes = [System.Int32(a * 1000_000) for a in amplitudes_in_mA]
-        durations = [System.UInt64(s * 1000) for s in durations_in_ms]
+        amplitudes = [System.Int32(a * 1_000_000) for a in amplitudes_in_mA]
+        durations = [System.UInt64(s * 1_000) for s in durations_in_ms]
 
         MODE = self.set_mode([channel_index], mode)
         with self.interface() as interface:
