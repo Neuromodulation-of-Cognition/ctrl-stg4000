@@ -46,32 +46,12 @@ class STG4000(STGX):
 
     """
 
-    def stop_stimulation(self, triggerIndex: List[int] = []):
-        """stops all trigger inputs or a selection based on a list
+    def _sanitize_triggerIndex(self, triggerIndex: list[int] = []):
 
-        args
-        ----
-        triggerIndex:List[int]
-            defaults to [], which stops stimulation at all channels. Give it a list of integers to start a specific subset of triggers, e.g. [0,1].
-
-        """
-
-        if triggerIndex == []:
-            triggerIndex = [c for c in range(self.channel_count)]
-        with self.interface() as interface:
-            interface.SendStop(System.UInt32(bitmap(triggerIndex)))
-
-    def start_stimulation(self, triggerIndex: List[int] = []):
-        """starts all trigger inputs or a selection based on a list
-
-        args
-        ----
-        triggerIndex:List[int]
-            defaults to [], which starts stimulation at all channels. Give it a list of integers to start a specific subset of triggers, e.g. [0,1].
-
-        """
-        if isinstance(triggerIndex, float):
-            raise ValueError(f"{triggerIndex=}, should be list[int] or int.")
+        if not isinstance(triggerIndex, (list, int)):
+            raise ValueError(
+                f"triggerIndex should be either (list or int), was {type(triggerIndex)}."
+            )
 
         if isinstance(triggerIndex, int):
             triggerIndex = [triggerIndex]
@@ -84,6 +64,33 @@ class STG4000(STGX):
                 raise ValueError(
                     f"{triggerIndex=} should be list[int], but {v} at {idx=} was {type(v)}."
                 )
+
+        return triggerIndex
+
+    def stop_stimulation(self, triggerIndex: List[int] = []):
+        """stops all trigger inputs or a selection based on a list
+
+        args
+        ----
+        triggerIndex:List[int]
+            defaults to [], which stops stimulation at all channels. Give it a list of integers to start a specific subset of triggers, e.g. [0,1].
+
+        """
+
+        triggerIndex = self._sanitize_triggerIndex(triggerIndex)
+        with self.interface() as interface:
+            interface.SendStop(System.UInt32(bitmap(triggerIndex)))
+
+    def start_stimulation(self, triggerIndex: List[int] = []):
+        """starts all trigger inputs or a selection based on a list
+
+        args
+        ----
+        triggerIndex:List[int]
+            defaults to [], which starts stimulation at all channels. Give it a list of integers to start a specific subset of triggers, e.g. [0,1].
+
+        """
+        triggerIndex = self._sanitize_triggerIndex(triggerIndex)
 
         with self.interface() as interface:
             interface.SendStart(System.UInt32(bitmap(triggerIndex)))
