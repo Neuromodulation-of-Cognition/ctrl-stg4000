@@ -96,33 +96,6 @@ class PulseFileAlternative:
         if self.inter_stimulus_interval < 0:
             raise ValueError("Inter stimulus interval cannot be negative")
 
-        """
-        # OLDDDDDDD
-        if mode == "biphasic":
-            intensity = [intensity_in_mA, -intensity_in_mA]
-            pulsewidth = [pulsewidth_in_ms, pulsewidth_in_ms]
-        elif mode == "monophasic":
-            intensity = [intensity_in_mA]
-            pulsewidth = [pulsewidth_in_ms]
-        else:
-            raise NotImplementedError(f"Unknown mode {mode}")
-
-        if pulsewidth_in_ms < 0:
-            raise ValueError("Minimum PulseWidth must be 0ms")
-
-        if burstcount < 1:
-            raise ValueError("Minimum BurstCount must be 1")
-
-        if isi_in_ms < 0:
-            raise ValueError("Minimum ISI must be 0ms")
-
-        self.intensity: List[float] = intensity
-        self.pulsewidth: List[float] = pulsewidth
-        self.mode: str = mode
-        self.burstcount: int = burstcount
-        self.isi: float = isi_in_ms
-        """
-
     def compile(self):
         """compile the pulsefile to compressed amps and durs
 
@@ -196,11 +169,13 @@ def encode(pulsefile, channel: int = 0) -> List[str]:
 
     stim_commands = []
     for _ in range(0, pulsefile.burstcount):
+        _milli_to_micro = 1000
         for amp, pw in zip(pulsefile.intensity, pulsefile.pulsewidth):
-            newline = f"{amp}\t{pw*1000}\n"  # scale to µA/µs
+            # TODO: IS THIS CORRECT?
+            newline = f"{amp}\t{pw*_milli_to_micro}\n"  # scale to µA/µs
             stim_commands.append(newline)
 
-        newline = f"0\t{pulsefile.isi*1000}\n"  # scale to µs
+        newline = f"0\t{pulsefile.isi*_milli_to_micro}\n"  # scale to µs
         stim_commands.append(newline)
 
     stim_info.extend(stim_commands)
@@ -252,11 +227,14 @@ def decompress(
         a list of amplitudes comprising the signal continuously sampled at the given rate
 
     """
-    if rate_in_hz not in [50_000, 10_000]:
-        raise ValueError("Rate must be either 10 or 50kHz")
-    rate_in_khz = rate_in_hz / 1000
     if len(amplitudes_in_mA) != len(durations_in_ms):
         raise ValueError("Every amplitude needs a duration and vice versa")
+
+    _hz_to_kHz = 0.001
+    rate_in_khz = rate_in_hz * _hz_to_kHz
+
+    if rate_in_khz not in [50, 10]:
+        raise ValueError("Rate must be either 10kHz or 50kHz")
 
     signal = []
     for a, d in zip(amplitudes_in_mA, durations_in_ms):
