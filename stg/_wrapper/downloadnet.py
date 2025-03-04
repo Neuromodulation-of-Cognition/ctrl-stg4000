@@ -195,10 +195,8 @@ class STG4000(STGX):
         if len(amplitudes_in_mA) != len(durations_in_ms):
             raise ValueError("Every amplitude needs a duration and vice versa!")
 
-        # TODO: CHECK WHAT UNIT CONVERSION THIS IS DOING FOR AMPS
-        # does STG get NANOAMPERE? WHO KNOWS?
-        _milli_to_nano = 1_000_000
-        _milli_to_micro = 1_000
+        _milli_to_nano = 1_000_000  # STG expects current in nanoampere
+        _milli_to_micro = 1_000  # STG expects duration in microseconds
         amplitudes = [System.Int32(a * _milli_to_nano) for a in amplitudes_in_mA]
         durations = [System.UInt64(s * _milli_to_micro) for s in durations_in_ms]
 
