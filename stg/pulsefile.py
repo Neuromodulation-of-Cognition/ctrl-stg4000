@@ -133,7 +133,8 @@ class PulseFileAlternative:
         durations_in_ms: List[float]
             a list of durations
 
-        """        amps = (self.intensities + [0]) * self.burstcount
+        """
+        amps = (self.intensities + [0]) * self.burstcount
         durs = (self.pulsewidths + [self.isi]) * self.burstcount
         return amps, durs
 

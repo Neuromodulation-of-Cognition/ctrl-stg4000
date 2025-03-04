@@ -195,8 +195,12 @@ class STG4000(STGX):
         if len(amplitudes_in_mA) != len(durations_in_ms):
             raise ValueError("Every amplitude needs a duration and vice versa!")
 
-        amplitudes = [System.Int32(a * 1_000_000) for a in amplitudes_in_mA]
-        durations = [System.UInt64(s * 1_000) for s in durations_in_ms]
+        # TODO: CHECK WHAT UNIT CONVERSION THIS IS DOING FOR AMPS
+        # does STG get NANOAMPERE? WHO KNOWS?
+        _milli_to_nano = 1_000_000
+        _milli_to_micro = 1_000
+        amplitudes = [System.Int32(a * _milli_to_nano) for a in amplitudes_in_mA]
+        durations = [System.UInt64(s * _milli_to_micro) for s in durations_in_ms]
 
         MODE = self.set_mode([channel_index], mode)
         with self.interface() as interface:
