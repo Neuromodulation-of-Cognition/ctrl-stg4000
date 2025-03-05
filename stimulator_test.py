@@ -31,7 +31,7 @@ symm_biphasic_error = {
 }
 
 symm_biphasic = {
-    "pulsewidth": 250,
+    "pulse_width": 250,
     "stimulation_duration": 5.0,
     "frequency": 3,
     "intensity": 1.0,
@@ -43,6 +43,12 @@ symm_biphasic = {
 test_list = [asymm_biphasic, monoph, symm_biphasic_error, symm_biphasic]
 
 for test in test_list:
-    pulsefile = PulseFileAlternative(**test)
+    try:
+        pulsefile = PulseFileAlternative(**test)
+    except:
+        print("Error in test")
+        print(test)
+        continue
+    print(f"Test {test} passed")
 
 print("done")

@@ -153,6 +153,17 @@ class STG4000(STGX):
         with self.interface() as interface:
             interface.SetupTrigger(0, channelmap, syncoutmap, repeat)
 
+    def clear_channels(self, channel_index: list[int] | int | str = 0, mode="current"):
+        """Clear a single channel from STG."""
+        if channel_index == "all":
+            for channel_index in range(self.channel_count):
+                self.clear_channels(channel_index, mode)
+        elif isinstance(channel_index, list):
+            for idx in channel_index:
+                self.clear_channels(idx, mode)
+        else:
+            self.download(channel_index, [0], [0], mode=mode)
+
     def download(
         self,
         channel_index: int = 0,
@@ -197,6 +208,7 @@ class STG4000(STGX):
 
         _milli_to_nano = 1_000_000  # STG expects current in nanoampere
         _milli_to_micro = 1_000  # STG expects duration in microseconds
+
         amplitudes = [System.Int32(a * _milli_to_nano) for a in amplitudes_in_mA]
         durations = [System.UInt64(s * _milli_to_micro) for s in durations_in_ms]
 
