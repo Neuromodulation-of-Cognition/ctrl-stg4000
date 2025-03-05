@@ -35,9 +35,11 @@ class PulseFileAlternative:
 
     """
 
+    pulse_width_limits = (100, 500)  # in µs
+
     def __init__(
         self,
-        pulse_width: int,  # in ms (not µs)
+        pulse_width: int,  # in µs
         stimulation_duration: float,  # in seconds
         frequency: float,  # in Hz
         intensity: float,  # in mA
@@ -77,7 +79,7 @@ class PulseFileAlternative:
         self.n_pulses = int(self.stimulation_duration * self.frequency)
         self.inter_stimulus_interval = (
             1 / self.frequency
-        ) * seconds_to_milli - self.pulse_width * micro_to_milli  # in us
+        ) * seconds_to_milli - self.pulse_width * micro_to_milli  # in µs
         if self.inter_stimulus_interval < 0:
             raise ValueError("Inter stimulus interval cannot be negative")
 
@@ -93,6 +95,14 @@ class PulseFileAlternative:
             raise ValueError("Frequency must be larger than 0")
         if self.stimulation_duration <= 0:
             raise ValueError("Stimulation duration must be larger than 0")
+        if self.pulse_width < self.pulse_width_limits[0]:
+            raise ValueError(
+                f"Pulse width must be at least {self.pulse_width_limits[0]} µs"
+            )
+        if self.pulse_width > self.pulse_width_limits[1]:
+            raise ValueError(
+                f"Pulse width must be at most {self.pulse_width_limits[1]} µs"
+            )
         if (
             self.waveform in ["symm_biphasic", "monophasic"]
             and self.phase_ratio is not None
