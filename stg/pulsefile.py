@@ -28,60 +28,19 @@ class PulseFileAlternative:
 
     def __init__(
         self,
-        pulsewidth,  # ms not µs
-        stimtime,  # s
-        frequency,  # Hz
-        intensity,  # mA
-        phase_ratio: tuple[float, float],
+        pulse_width: int,  # in ms (not µs)
+        stimulation_duration: float,  # in seconds
+        frequency: float,  # in Hz
+        intensity: float,  # in mA
+        phase_ratio: tuple[float, float] = None,
         first_intensity_negative: bool = True,
-        max_intensity: float = 3,  # mA
-        polarity_change_delay: float = 0,  # ms
+        max_intensity: float = 3,  # in mA
+        polarity_change_delay: float = 0,  # in ms
         waveform: str = "rectangular_assym_biphasic",
-        # TODO: take max intensity from stg4000?
-        # TODO: start intensity?
-        # intensity_in_mA: float = 1,
-        # mode: str = "biphasic",
-        # pulsewidth_in_ms: float = 0.1,
-        # burstcount: int = 1,
-        # isi_in_ms: float = 49.8,
     ):
-        # TODO: input checking of values
-        if intensity > max_intensity:
-            raise ValueError(f"Intensity cannot be greater than {max_intensity} mA")
-
-        if intensity < 0:
-            raise ValueError("Intensity cannot be negative")
-
-        if frequency <= 0:
-            raise ValueError("Frequency must be larger than 0")
-
-        if stimtime <= 0:
-            raise ValueError("Stimtime must be larger than 0")
-
-        # TODO: check accuracy of STG stimulator and round accordingly
-        # generate waveform: rectanfular assymmetric biphasic: starts with negative waveform and then positive phase of double the duration but half the intensity
-        # TODO: make ratio of positive and negative phase intensity adjustable
-        if waveform == "rectangular_assym_biphasic":
-            stimtime = pulsewidth - polarity_change_delay
-            first_phase_dur = stimtime * (phase_ratio[0] / sum(phase_ratio))
-            second_phase_dur = stimtime * (phase_ratio[1] / sum(phase_ratio))
-
-            charge_balance_ratio = phase_ratio[0] / phase_ratio[1]
-
-            first_phase_intensity = (
-                -intensity if first_intensity_negative else intensity
-            )
-            second_phase_intensity = -first_phase_intensity * charge_balance_ratio
-
-            self.intensities = [first_phase_intensity, second_phase_intensity]
-            self.pulsewidths = [first_phase_dur, second_phase_dur]
-
-        if waveform == "monophasic":
-            self.intensities = [intensity]
-            self.pulsewidths = [pulsewidth]
-
-        self.pulsewidth = pulsewidth
-        self.stimtime = stimtime
+        # Store inputs with descriptive names
+        self.pulse_width = pulse_width
+        self.stimulation_duration = stimulation_duration
         self.frequency = frequency
         self.intensity = intensity
         self.phase_ratio = phase_ratio
@@ -89,12 +48,122 @@ class PulseFileAlternative:
         self.max_intensity = max_intensity
         self.polarity_change_delay = polarity_change_delay
         self.waveform = waveform
-        self.n_pulses = int(stimtime * frequency)
+
+        # Validate inputs first
+        self._validate_input()
+
+        # Generate waveform-specific attributes
+        if self.waveform == "rectangular_assym_biphasic":
+            self.intensities, self.pulsewidths = (
+                self._generate_rectangular_assym_biphasic_waveform()
+            )
+        elif self.waveform == "symm_biphasic":
+            self.intensities, self.pulsewidths = (
+                self._generate_symmetric_biphasic_waveform
+            )
+        elif self.waveform == "monophasic":
+            self.intensities, self.pulsewidths = self._generate_monophasic_waveform()
+        else:
+            raise ValueError(f"Unsupported waveform type: {self.waveform}")
+
+        # Calculate derived values
+        self.n_pulses = int(self.stimulation_duration * self.frequency)
         self.inter_stimulus_interval = (
-            1 / frequency
-        ) * 1000 - pulsewidth  # in ms  # TODO potential cringe
+            1 / self.frequency
+        ) * 1000 - self.pulse_width  # in ms
         if self.inter_stimulus_interval < 0:
             raise ValueError("Inter stimulus interval cannot be negative")
+
+    def _validate_input(self):
+        """Validates the input parameters for the stimulation protocol."""
+        if self.intensity > self.max_intensity:
+            raise ValueError(
+                f"Intensity cannot be greater than {self.max_intensity} mA"
+            )
+        if self.intensity < 0:
+            raise ValueError("Intensity cannot be negative")
+        if self.frequency <= 0:
+            raise ValueError("Frequency must be larger than 0")
+        if self.stimulation_duration <= 0:
+            raise ValueError("Stimulation duration must be larger than 0")
+
+        if self.phase_ratio is None and self.waveform not in [
+            "monophasic",
+            "symm_biphasic",
+        ]:
+            raise ValueError(
+                "Phase ratio must be provided for waveforms not monophasic or symmetric biphasic."
+            )
+
+    def _generate_rectangular_assym_biphasic_waveform(
+        self,
+    ) -> tuple[list[float], list[float]]:
+        """
+        Generate waveform parameters for a rectangular asymmetric biphasic waveform.
+        Returns a tuple (intensities, pulsewidths) where:
+          - intensities: list of intensities for each phase.
+          - pulsewidths: list of pulse widths for each phase.
+        """
+        # Effective stimulation time (subtracting any delay before polarity change)
+        effective_time = self.pulse_width - self.polarity_change_delay
+
+        total_ratio = sum(self.phase_ratio)
+        first_phase_duration = effective_time * (self.phase_ratio[0] / total_ratio)
+        second_phase_duration = effective_time * (self.phase_ratio[1] / total_ratio)
+
+        # Calculate charge balance based on the phase ratio
+        charge_balance_ratio = self.phase_ratio[0] / self.phase_ratio[1]
+
+        # Determine phase intensities based on the first phase polarity
+        first_phase_intensity = (
+            -self.intensity if self.first_intensity_negative else self.intensity
+        )
+        second_phase_intensity = -first_phase_intensity * charge_balance_ratio
+
+        return [first_phase_intensity, second_phase_intensity], [
+            first_phase_duration,
+            second_phase_duration,
+        ]
+
+    def _generate_symmetric_biphasic_waveform(self) -> tuple[list[float], list[float]]:
+        """
+        Generate waveform parameters for a symmetric biphasic waveform.
+
+        This method splits the effective pulse width (after subtracting any
+        polarity change delay) equally between the two phases. It assigns
+        equal absolute intensity values to both phases, with the first phase's
+        sign determined by `first_intensity_negative`.
+
+        Returns:
+            tuple: A tuple containing:
+            - intensities (list[float]): List with two intensity values for the two phases.
+            - pulsewidths (list[float]): List with two pulse widths (equal duration for both phases).
+        """
+        effective_pulse_width = self.pulse_width - self.polarity_change_delay
+        if effective_pulse_width <= 0:
+            raise ValueError(
+                "Effective pulse width must be positive after subtracting polarity change delay."
+            )
+
+        phase_duration = effective_pulse_width / 2
+
+        if self.first_intensity_negative:
+            first_intensity = -self.intensity
+            second_intensity = self.intensity
+        else:
+            first_intensity = self.intensity
+            second_intensity = -self.intensity
+
+        return [first_intensity, second_intensity], [phase_duration, phase_duration]
+
+    def _generate_monophasic_waveform(self) -> tuple[list[float], list[float]]:
+        """
+        Generate waveform parameters for a monophasic waveform.
+        Returns a tuple (intensities, pulsewidths) where:
+          - intensities: list containing the single intensity value.
+          - pulsewidths: list containing the pulse width.
+        """
+        return [self.intensity], [self.pulse_width]
 
     def compile(self):
         """compile the pulsefile to compressed amps and durs
@@ -107,14 +176,14 @@ class PulseFileAlternative:
             a list of durations
 
         """
-        amps = (self.intensities + [0]) * self.burstcount
-        durs = (self.pulsewidths + [self.isi]) * self.burstcount
+        amps = (self.intensities + [0]) * self.n_pulses
+        durs = (self.pulsewidths + [self.inter_stimulus_interval]) * self.n_pulses
         return amps, durs
 
     @property
     def duration_in_ms(self):
         "the duration of the complete stimulation including all bursts"
-        return self.burstcount * (sum(self.pulsewidths) + self.isi)
+        return self.n_pulses * (sum(self.pulsewidths) + self.inter_stimulus_interval)
 
     def __call__(self):
         return self.compile()
