@@ -94,14 +94,12 @@ class PulseFileAlternative:
         if self.stimulation_duration <= 0:
             raise ValueError("Stimulation duration must be larger than 0")
         if (
-            self.waveform == "symm_biphasic"
+            self.waveform in ["symm_biphasic", "monophasic"]
             and self.phase_ratio is not None
-            or self.phase_ratio[0] == self.phase_ratio[1]
         ):
             raise ValueError(
-                "For symmetric waveforms phase_ratio is not required and must bnot be uneven."
+                "For symmetric waveforms phase_ratio should not be passed."
             )
-
         if self.phase_ratio is None and self.waveform not in [
             "monophasic",
             "symm_biphasic",
