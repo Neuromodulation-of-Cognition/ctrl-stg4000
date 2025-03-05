@@ -38,7 +38,7 @@ class PulseFileAlternative:
         polarity_change_delay: float = 0,  # in ms
         waveform: str = "rectangular_assym_biphasic",
     ):
-        # Store inputs with descriptive names
+
         self.pulse_width = pulse_width
         self.stimulation_duration = stimulation_duration
         self.frequency = frequency
@@ -49,10 +49,8 @@ class PulseFileAlternative:
         self.polarity_change_delay = polarity_change_delay
         self.waveform = waveform
 
-        # Validate inputs first
         self._validate_input()
 
-        # Generate waveform-specific attributes
         if self.waveform == "rectangular_assym_biphasic":
             self.intensities, self.pulsewidths = (
                 self._generate_rectangular_assym_biphasic_waveform()
@@ -66,7 +64,6 @@ class PulseFileAlternative:
         else:
             raise ValueError(f"Unsupported waveform type: {self.waveform}")
 
-        # Calculate derived values
         self.n_pulses = int(self.stimulation_duration * self.frequency)
         self.inter_stimulus_interval = (
             1 / self.frequency
@@ -214,7 +211,7 @@ def init_datfile(filename: FileName):
             f.write(line)
 
 
-def encode(pulsefile, channel: int = 0) -> List[str]:
+def encode(pulsefile: PulseFileAlternative, channel: int = 0) -> List[str]:
     """encode a pulsefile into ascii format
 
     args
@@ -251,7 +248,9 @@ def encode(pulsefile, channel: int = 0) -> List[str]:
     return stim_info
 
 
-def dump(pulsefiles: List[PulseFile], filename: FileName = "~/Desktop/test.dat"):
+def dump(
+    pulsefiles: List[PulseFileAlternative], filename: FileName = "~/Desktop/test.dat"
+):
     """save Pulsefiles into a dat file readable by `MC Stimulus II <https://www.multichannelsystems.com/software/mc-stimulus-ii>`_
 
     args
@@ -315,7 +314,7 @@ def decompress(
 
 
 def entrain(
-    pulsefile: PulseFile, ibi_in_ms: float, count: int
+    pulsefile: PulseFileAlternative, ibi_in_ms: float, count: int
 ) -> Tuple[List[float], List[float]]:
     """compile and repeat a pulsefile separated by ibi_in_ms
 
