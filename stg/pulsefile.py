@@ -220,7 +220,7 @@ def init_datfile(filename: FileName):
             f.write(line)
 
 
-def encode(pulsefile: PulseFileAlternative, channel: int = 0) -> List[str]:
+def encode_ascii(pulsefile: PulseFileAlternative, channel: int = 0) -> List[str]:
     """encode a pulsefile into ascii format
 
     args
@@ -276,7 +276,7 @@ def save_pulsefile(
     for idx, pulsefile in enumerate(pulsefiles):
         if idx > 0:
             lines.append("\n")
-        lines.extend(encode(pulsefile, channel=idx))
+        lines.extend(encode_ascii(pulsefile, channel=idx))
     with fname.open("w") as f:
         for line in lines:
             f.write(line)
@@ -462,7 +462,7 @@ def init_datfile(filename: FileName):
             f.write(line)
 
 
-def encode(pulsefile, channel: int = 0) -> List[str]:
+def encode_ascii(pulsefile, channel: int = 0) -> List[str]:
     """encode a pulsefile into ascii format
 
     args
@@ -516,7 +516,7 @@ def save_pulsefile(
     for idx, pulsefile in enumerate(pulsefiles):
         if idx > 0:
             lines.append("\n")
-        lines.extend(encode(pulsefile, channel=idx))
+        lines.extend(encode_ascii(pulsefile, channel=idx))
     with fname.open("w") as f:
         for line in lines:
             f.write(line)
