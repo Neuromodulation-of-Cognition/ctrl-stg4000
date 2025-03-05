@@ -282,7 +282,7 @@ def save_pulsefile(
             f.write(line)
 
 
-def decompress(
+def decompile(
     amplitudes_in_mA: List[float,] = [0],
     durations_in_ms: List[float,] = [0],
     rate_in_hz: int = 50_000,
@@ -522,7 +522,7 @@ def save_pulsefile(
             f.write(line)
 
 
-def decompress(
+def decompile(
     amplitudes_in_mA: List[float,] = [0],
     durations_in_ms: List[float,] = [0],
     rate_in_hz: int = 50_000,

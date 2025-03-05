@@ -8,7 +8,7 @@ from stg._wrapper.dll import (
     DeviceInfo,
 )
 from stg._wrapper.downloadnet import STG4000 as STG4000DL
-from stg.pulsefile import decompress
+from stg.pulsefile import decompile
 import time
 
 
@@ -73,7 +73,7 @@ class SignalMapping(dict):
 # -----------------------------------------------------------------------------
 class STG4000Streamer(STG4000DL):
     """
-    This class implements the interface to stream data. 
+    This class implements the interface to stream data.
 
     .. admonition:: Quote from the documentation of the DLL:
 
@@ -85,17 +85,17 @@ class STG4000Streamer(STG4000DL):
         *It is the responsibility of the user to keep the ring buffer in the memory of the PC filled, so the DLL can supply sufficient data to the STG. To do so, the Windows DLL allows to define a "callback" function which is called whenever new data is needed, or more precise, as soon as the ring buffer in the memory of the PC falls below the user defined threshold.*
 
         *Small buffers have the advantage of a low latency between data generation in the callback funtion and its output as a analog signal from the STG. However for low latency to work, the user-written callback function has to be fast and to produce a steady flow of data.*
-        
 
-    For you, that means you have to set two parameters carefully when you initialize the streaming mode with :meth:`~.start_streaming`. These parameters are the :code:`buffer_in_s`, which defines the size of the buffer in the DLL, and the :code:`capacity_in_s`, which defines the size of the buffer on the STG. Both buffers need to be at least as large the the signal you want to buffer. Yet, larger buffer means that the latency when updating it becomes larger, too. Too short buffers will fail without error, and too large buffers might cause 
 
-    Streaming is implemented by constantly reading the stimulation signal you have set with :meth:`~.set_signal` for each channel, and pushing this signal into the DLL-buffer as soon as there is enough space. This is done within its own thread, and if you use :meth:`~.set_signal` it is thread-safe. Yet, space in the DLL becomes available at the speed the STG pulls data from the DLL. That means not only that there is a natural jitter, but there are also racing conditions if you update your signal faster than data is actually being pulled from the STG. 
-    
+    For you, that means you have to set two parameters carefully when you initialize the streaming mode with :meth:`~.start_streaming`. These parameters are the :code:`buffer_in_s`, which defines the size of the buffer in the DLL, and the :code:`capacity_in_s`, which defines the size of the buffer on the STG. Both buffers need to be at least as large the the signal you want to buffer. Yet, larger buffer means that the latency when updating it becomes larger, too. Too short buffers will fail without error, and too large buffers might cause
+
+    Streaming is implemented by constantly reading the stimulation signal you have set with :meth:`~.set_signal` for each channel, and pushing this signal into the DLL-buffer as soon as there is enough space. This is done within its own thread, and if you use :meth:`~.set_signal` it is thread-safe. Yet, space in the DLL becomes available at the speed the STG pulls data from the DLL. That means not only that there is a natural jitter, but there are also racing conditions if you update your signal faster than data is actually being pulled from the STG.
+
     .. note::
-    
+
        * Uncontrolled racing conditions when adapting stimulation online
        * Extensively test the optimal buffer sizes for your stimulation signal
-    
+
     Example
     -------
 
@@ -103,21 +103,21 @@ class STG4000Streamer(STG4000DL):
 
        import time
        from stg.api import STG4000
-       
-       buffer_in_s=0.05 # how large is the buffer in the DLL?       
+
+       buffer_in_s=0.05 # how large is the buffer in the DLL?
        capacity_in_s=.1 # how large is the buffer on the STG?
 
-       stg = STG4000()              
-       stg.start_streaming(capacity_in_s=capacity_in_s, 
+       stg = STG4000()
+       stg.start_streaming(capacity_in_s=capacity_in_s,
                            buffer_in_s=buffer_in_s)
        while True:
            stg.set_signal(0, amplitudes_in_mA=[0], durations_in_ms=[.1])
-           time.sleep(0.5)    
+           time.sleep(0.5)
            stg.set_signal(0, amplitudes_in_mA=[1, -1, 0], durations_in_ms=[.1, .1, 49.7])
-           time.sleep(buffer_in_s / 2)  
+           time.sleep(buffer_in_s / 2)
 
     .. warning::
-    
+
         This class inherits from :class:`~.STG4000` and therefore you can use this class also to download, start, and stop stimulation. How these two modes mix has not been tested so far. Be safe and use either or.
 
 
@@ -139,7 +139,7 @@ class STG4000Streamer(STG4000DL):
         durations_in_ms: List[float,] = [0],
     ):
         """sets the signal to be continually appended to the buffer
-        
+
         args
         ----
         channel_index: int = 0
@@ -151,9 +151,9 @@ class STG4000Streamer(STG4000DL):
 
 
         The amplitudes and durations are decompressed (:meth:`~.stg.pulsefile.decompress`) to the sampling rate defined in :attr:`~.output_rate_in_hz`.
-        
+
         """
-        signal = decompress(
+        signal = decompile(
             amplitudes_in_mA=amplitudes_in_mA,
             durations_in_ms=durations_in_ms,
             rate_in_hz=self._outputrate,
@@ -226,7 +226,7 @@ class STG4000Streamer(STG4000DL):
         callback_percent: int = 10,
     ):
         """start streaming
-        
+
         sets the STG into streaming mode and creates buffers of the respective sizes within the DLL and on the STG. After the thread has initalized, it starts pushing data as set by :meth:`~.set_signal` as soon as space is left in the DLL buffer.
 
         args
@@ -237,7 +237,7 @@ class STG4000Streamer(STG4000DL):
             the size of the buffer on the STG
         callback_percent: int = 10
             at what state of the DLL-buffer the DLL should request new data. Should have no effect in this implementation, because we constanly push data into the buffer as soon as there is enough space.
-        
+
         """
         barrier = threading.Barrier(2)
         self._streaming.set()
@@ -257,8 +257,7 @@ class STG4000Streamer(STG4000DL):
             raise (self._error)
 
     def stop_streaming(self):
-        """closes the thread started when calling :meth:`~.start_streaming` gracefully
-        """
+        """closes the thread started when calling :meth:`~.start_streaming` gracefully"""
         self._streaming.clear()
         if hasattr(self, "_t"):
             self._t.join()

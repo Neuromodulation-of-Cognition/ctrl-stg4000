@@ -1,4 +1,4 @@
-from stg.pulsefile import generate_burst_train, PulseFile, save_pulsefile, decompress
+from stg.pulsefile import generate_burst_train, PulseFile, save_pulsefile, decompile
 import pytest
 from pathlib import Path
 
@@ -12,7 +12,7 @@ def test_decompress():
     amplitudes_in_mA = [1, -1, 0]
     durations_in_ms = [0.1, 0.1, 49.8]
     rate_in_hz = 50_000
-    signal = decompress(
+    signal = decompile(
         amplitudes_in_mA=amplitudes_in_mA,
         durations_in_ms=durations_in_ms,
         rate_in_hz=rate_in_hz,
@@ -23,10 +23,10 @@ def test_decompress():
     assert signal[10:] == [0] * 2490
 
     with pytest.raises(ValueError):
-        signal = decompress(rate_in_hz=1)
+        signal = decompile(rate_in_hz=1)
 
     with pytest.raises(ValueError):
-        signal = decompress(amplitudes_in_mA=[1, 1], durations_in_ms=[0.1])
+        signal = decompile(amplitudes_in_mA=[1, 1], durations_in_ms=[0.1])
 
 
 def test_pw_raises():
