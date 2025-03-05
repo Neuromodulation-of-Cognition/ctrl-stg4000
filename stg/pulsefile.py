@@ -66,17 +66,18 @@ class PulseFileAlternative:
             )
         elif self.waveform == "symm_biphasic":
             self.intensities, self.pulsewidths = (
-                self._generate_symmetric_biphasic_waveform
+                self._generate_symmetric_biphasic_waveform()
             )
         elif self.waveform == "monophasic":
             self.intensities, self.pulsewidths = self._generate_monophasic_waveform()
         else:
             raise ValueError(f"Unsupported waveform type: {self.waveform}")
-
+        micro_to_milli = 0.001
+        seconds_to_milli = 1000
         self.n_pulses = int(self.stimulation_duration * self.frequency)
         self.inter_stimulus_interval = (
             1 / self.frequency
-        ) * 1000 - self.pulse_width  # in ms
+        ) * seconds_to_milli - self.pulse_width * micro_to_milli  # in us
         if self.inter_stimulus_interval < 0:
             raise ValueError("Inter stimulus interval cannot be negative")
 
