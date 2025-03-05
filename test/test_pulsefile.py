@@ -1,4 +1,4 @@
-from stg.pulsefile import entrain, PulseFile, dump, decompress
+from stg.pulsefile import generate_burst_train, PulseFile, save_pulsefile, decompress
 import pytest
 from pathlib import Path
 
@@ -65,7 +65,11 @@ def test_pw_compile(pw):
 @pytest.mark.parametrize("mode", ["monophasic", "biphasic"])
 def test_mode_compile(mode):
     pf = PulseFile(
-        intensity_in_mA=1, pulsewidth_in_ms=1, mode=mode, burstcount=1, isi_in_ms=0,
+        intensity_in_mA=1,
+        pulsewidth_in_ms=1,
+        mode=mode,
+        burstcount=1,
+        isi_in_ms=0,
     )
     amps, durs = pf.compile()
     assert amps[0] == 1
@@ -80,7 +84,12 @@ def test_mode_compile(mode):
 
 
 def test_duration_in_ms():
-    pf = PulseFile(pulsewidth_in_ms=1, mode="biphasic", burstcount=1, isi_in_ms=48,)
+    pf = PulseFile(
+        pulsewidth_in_ms=1,
+        mode="biphasic",
+        burstcount=1,
+        isi_in_ms=48,
+    )
     assert pf.duration_in_ms == 50
 
 
@@ -94,7 +103,7 @@ def test_dump():
 
     with NamedTemporaryFile(suffix=".invalid") as fname:
         with pytest.raises(ValueError):
-            dump([], fname.name)
+            save_pulsefile([], fname.name)
 
     pf = PulseFile()
     fname = "test1.dat"
@@ -124,7 +133,7 @@ def test_dump():
         assert o == e
 
     fname = "test2.dat"
-    dump([pf, pf], fname)
+    save_pulsefile([pf, pf], fname)
     with open(fname) as f:
         content = f.readlines()
     Path(fname).unlink()
@@ -159,7 +168,7 @@ def test_dump():
 def test_entrain():
     pf = PulseFile()
     a, d = pf()
-    amps, durs = entrain(pf, ibi_in_ms=1, count=2)
+    amps, durs = generate_burst_train(pf, ibi_in_ms=1, count=2)
     assert amps[3] == 0
     assert durs[3] == 1
     assert durs[0:3] == durs[4:]

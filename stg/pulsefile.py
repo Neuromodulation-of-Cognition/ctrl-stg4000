@@ -6,21 +6,30 @@ FileName = Union[Path, str]
 
 
 class PulseFileAlternative:
-    """Programmatically generate repetitive a biphasic or monophasic pulses
+    """Generates programmable monophasic or biphasic pulse sequences.
 
-    args
-    ----
-    intensity_in_mA: float = 1
-        the amplitude of the first rectangular pulse
-    mode: str {"biphasic", "monophasic"}
-        whether the pulse will be monophasic of biphasic, i.e. followed by a rectangular pulse with inverted amplitude
-    pulsewidth_in_ms: float = 0.1
-        the width of each rectangular pulse
-    burstcount: int = 1
-        how often these pulses will be repeated
-    isi_in_ms: float = 49.8
-        how much time will pass between pulses
+    This class defines electrical stimulation waveforms with configurable
+    intensity, duration, frequency, and pulse shape. It currently supports
+    monophasic and biphasic rectangular waveforms (symmetric or asymmetric)
+    with optional polarity changes.
 
+    Attributes:
+        pulse_width (int): Width of each pulse in ms.
+        stimulation_duration (float): Total stimulation duration in seconds.
+        frequency (float): Stimulation frequency in Hz.
+        intensity (float): Pulse intensity in mA.
+        phase_ratio (tuple[float, float] or None): Ratio of phase durations
+            (only for asymmetric biphasic waveforms).
+        first_intensity_negative (bool): Whether the first phase is negative.
+        max_intensity (float): Maximum allowed intensity in mA.
+        polarity_change_delay (float): Delay before polarity change in ms.
+        waveform (str): Type of waveform ('monophasic', 'symm_biphasic',
+            or 'rectangular_assym_biphasic').
+
+    Methods:
+        compile(): Generates amplitude and duration sequences for stimulation.
+        duration_in_ms: Computes the total duration of the stimulation.
+        dump(fname): Saves the pulse configuration to a file.
 
     After initialization, run  :meth:`~.compile` to generate amplitudes and durations. These can be downloadwed with STG4000s :meth:`~.stg._wrapper.downloadnet.STG4000.download`
 
@@ -185,8 +194,8 @@ class PulseFileAlternative:
     def __call__(self):
         return self.compile()
 
-    def dump(self, fname):
-        dump([self], fname)
+    def save(self, fname):
+        save_pulsefile([self], fname)
 
 
 def init_datfile(filename: FileName):
@@ -248,7 +257,7 @@ def encode(pulsefile: PulseFileAlternative, channel: int = 0) -> List[str]:
     return stim_info
 
 
-def dump(
+def save_pulsefile(
     pulsefiles: List[PulseFileAlternative], filename: FileName = "~/Desktop/test.dat"
 ):
     """save Pulsefiles into a dat file readable by `MC Stimulus II <https://www.multichannelsystems.com/software/mc-stimulus-ii>`_
@@ -313,8 +322,8 @@ def decompress(
 # --------
 
 
-def entrain(
-    pulsefile: PulseFileAlternative, ibi_in_ms: float, count: int
+def generate_burst_train(
+    pulsefile: PulseFileAlternative, ibi_in_ms: float, n_total_bursts: int
 ) -> Tuple[List[float], List[float]]:
     """compile and repeat a pulsefile separated by ibi_in_ms
 
@@ -337,14 +346,14 @@ def entrain(
         a list of durations
     """
     inamps, indurs = pulsefile.compile()
-    for cnt in range(count):
-        if cnt == 0:
-            amps, durs = inamps[:], indurs[:]
-        else:
-            amps += [0]
-            durs += [ibi_in_ms]
-            amps += inamps
-            durs += indurs
+    amps, durs = [], []
+    for current_burst in range(n_total_bursts):
+        if current_burst > 0:
+            # Insert pause between bursts of length ibi_in_ms
+            amps.append(0)
+            durs.append(ibi_in_ms)
+        amps.extend(inamps)
+        durs.extend(indurs)
     return amps, durs
 
 
@@ -428,7 +437,7 @@ class PulseFile:
         return self.compile()
 
     def dump(self, fname):
-        dump([self], fname)
+        save_pulsefile([self], fname)
 
 
 def init_datfile(filename: FileName):
@@ -488,7 +497,9 @@ def encode(pulsefile, channel: int = 0) -> List[str]:
     return stim_info
 
 
-def dump(pulsefiles: List[PulseFile], filename: FileName = "~/Desktop/test.dat"):
+def save_pulsefile(
+    pulsefiles: List[PulseFile], filename: FileName = "~/Desktop/test.dat"
+):
     """save Pulsefiles into a dat file readable by `MC Stimulus II <https://www.multichannelsystems.com/software/mc-stimulus-ii>`_
 
     args
@@ -548,7 +559,7 @@ def decompress(
 # --------
 
 
-def entrain(
+def generate_burst_train(
     pulsefile: PulseFile, ibi_in_ms: float, count: int
 ) -> Tuple[List[float], List[float]]:
     """compile and repeat a pulsefile separated by ibi_in_ms

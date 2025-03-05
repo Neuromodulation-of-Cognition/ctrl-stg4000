@@ -4,9 +4,10 @@ import sys
 import pathlib
 from functools import partial
 from stg.api import STG4000, PulseFile
-from stg.pulsefile import dump
+from stg.pulsefile import save_pulsefile
 
-#%%
+
+# %%
 class Intensity:
     def __init__(self, labels, bumin, buplus, repetitive_button, download_foo, fuse):
         self.labels = labels
@@ -43,7 +44,7 @@ class Intensity:
         for i, lbl in enumerate(reversed(self.labels)):
             v = float(lbl.text())
             # print(i, 10**i, v, lbl.text())
-            intensity += v * (10 ** i)
+            intensity += v * (10**i)
         intensity = intensity * 10  # in uA
         print(
             "Set to ",
@@ -114,7 +115,7 @@ class MainWindow(QtWidgets.QMainWindow):
         )
         if filename:
             (p0, p1) = self.fuse()
-            dump(filename=filename, pulsefiles=(p0, p1))
+            save_pulsefile(filename=filename, pulsefiles=(p0, p1))
             print(f"Saving to {filename}")
 
     def __init__(self, parent=None):
